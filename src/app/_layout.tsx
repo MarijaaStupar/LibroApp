@@ -4,7 +4,9 @@ import {
   CormorantGaramond_500Medium,
   CormorantGaramond_500Medium_Italic,
   CormorantGaramond_600SemiBold,
+  CormorantGaramond_600SemiBold_Italic,
   CormorantGaramond_700Bold,
+  CormorantGaramond_700Bold_Italic,
 } from "@expo-google-fonts/cormorant-garamond";
 import {
   Inter_200ExtraLight,
@@ -28,7 +30,9 @@ export default function RootLayout() {
     CormorantGaramond_500Medium,
     CormorantGaramond_500Medium_Italic,
     CormorantGaramond_600SemiBold,
+    CormorantGaramond_600SemiBold_Italic,
     CormorantGaramond_700Bold,
+    CormorantGaramond_700Bold_Italic,
     Inter_200ExtraLight,
     Inter_300Light,
     Inter_400Regular,

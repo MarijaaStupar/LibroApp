@@ -26,7 +26,9 @@ export const FONTS = {
   serifMedium: "CormorantGaramond_500Medium",
   serifMediumItalic: "CormorantGaramond_500Medium_Italic",
   serifSemiBold: "CormorantGaramond_600SemiBold",
+  serifSemiBoldItalic: "CormorantGaramond_600SemiBold_Italic",
   serifBold: "CormorantGaramond_700Bold",
+  serifBoldItalic: "CormorantGaramond_700Bold_Italic",
 
   sansLight: "Inter_300Light",
   sansRegular: "Inter_400Regular",
