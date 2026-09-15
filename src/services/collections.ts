@@ -1,3 +1,4 @@
+import type { BookCatalog } from "@/services/books";
 import { supabase } from "@/services/supabase";
 
 export type Collection = {
@@ -9,7 +10,6 @@ export type Collection = {
 };
 
 export const DEFAULT_COLLECTION_NAMES = [
-  "Save",
   "Currently reading",
   "Read",
   "Want to read",
@@ -80,6 +80,99 @@ export async function getUserCollections(): Promise<Collection[]> {
     if (bi !== -1) return 1;
     return a.name.localeCompare(b.name);
   });
+}
+
+export async function getCollectionBookCounts(
+  collectionIds: string[],
+): Promise<Record<string, number>> {
+  if (collectionIds.length === 0) return {};
+
+  const { data, error } = await supabase
+    .from("collection_books")
+    .select("collection_id")
+    .in("collection_id", collectionIds);
+  if (error) throw error;
+
+  const counts: Record<string, number> = {};
+  (data ?? []).forEach((row: { collection_id: string }) => {
+    counts[row.collection_id] = (counts[row.collection_id] ?? 0) + 1;
+  });
+  return counts;
+}
+
+export async function getCollectionById(
+  id: string,
+): Promise<Collection | null> {
+  const { data, error } = await supabase
+    .from("collections")
+    .select("id, user_id, name, cover_url, created_at")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
+  return data as Collection | null;
+}
+
+export async function getCollectionBooks(
+  collectionId: string,
+): Promise<BookCatalog[]> {
+  const { data, error } = await supabase
+    .from("collection_books")
+    .select("books(id, title, author, cover_url, total_pages)")
+    .eq("collection_id", collectionId);
+  if (error) throw error;
+
+  return (data ?? [])
+    .map((row: any) => row.books)
+    .filter(Boolean) as BookCatalog[];
+}
+
+export async function createCollection(name: string): Promise<Collection> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nisi ulogovana.");
+
+  const { data, error } = await supabase
+    .from("collections")
+    .insert({ user_id: user.id, name })
+    .select("id, user_id, name, cover_url, created_at")
+    .single();
+  if (error) throw error;
+  return data as Collection;
+}
+
+export async function addBooksToCollection(
+  collectionId: string,
+  bookIds: string[],
+): Promise<void> {
+  if (bookIds.length === 0) return;
+
+  const { error } = await supabase
+    .from("collection_books")
+    .insert(
+      bookIds.map((book_id) => ({ collection_id: collectionId, book_id })),
+    );
+  if (error) throw error;
+}
+
+export async function updateCollectionName(
+  id: string,
+  name: string,
+): Promise<Collection> {
+  const { data, error } = await supabase
+    .from("collections")
+    .update({ name })
+    .eq("id", id)
+    .select("id, user_id, name, cover_url, created_at")
+    .single();
+  if (error) throw error;
+  return data as Collection;
+}
+
+export async function deleteCollection(id: string): Promise<void> {
+  await supabase.from("collection_books").delete().eq("collection_id", id);
+  const { error } = await supabase.from("collections").delete().eq("id", id);
+  if (error) throw error;
 }
 
 export async function getBookCollectionIds(
