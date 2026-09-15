@@ -21,11 +21,19 @@ import {
   Text,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+
+const HERO_HEIGHT = 200;
+const HERO_OVERLAP = 46;
 
 export default function ReadingRoomScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+
   const [book, setBook] = useState<UserBook | null>(null);
   const [loading, setLoading] = useState(true);
   const [editPageVisible, setEditPageVisible] = useState(false);
@@ -86,7 +94,10 @@ export default function ReadingRoomScreen() {
   };
 
   const comingSoonLog = () =>
-    Alert.alert("Coming soon", "Log reading session isn't available yet.");
+    Alert.alert("Uskoro", "Log reading session isn't available yet.");
+
+  const comingSoonThought = () =>
+    Alert.alert("Uskoro", "Writing a thought isn't available yet.");
 
   const openDiary = () => {
     if (!book) return;
@@ -117,24 +128,159 @@ export default function ReadingRoomScreen() {
   const isFinished = book.status === "finished";
 
   return (
-    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-      <View style={styles.topRow}>
-        <Pressable onPress={() => router.back()} style={styles.iconButton}>
-          <Ionicons name="chevron-back" size={24} color={COLORS.textMain} />
-        </Pressable>
-        <Pressable
-          onPress={() => setOptionsMenuVisible(true)}
-          style={styles.iconButton}
+    <View style={styles.safe}>
+      <View
+        style={[
+          styles.sheet,
+          { marginTop: insets.top + HERO_HEIGHT - HERO_OVERLAP },
+        ]}
+      >
+        <View
+          style={[styles.sheetContent, { paddingBottom: insets.bottom + 14 }]}
         >
-          <Ionicons
-            name="ellipsis-horizontal"
-            size={22}
-            color={COLORS.textMain}
-          />
-        </Pressable>
+          <Text style={styles.title} numberOfLines={2}>
+            {book.books.title}
+          </Text>
+          <Text style={styles.author}>{book.books.author}</Text>
+
+          <View style={styles.progressRow}>
+            <View style={styles.progressTrack}>
+              <View
+                style={[
+                  styles.progressFill,
+                  { width: `${book.progress_percent}%` },
+                ]}
+              />
+            </View>
+            <Text style={styles.progressPercent}>{book.progress_percent}%</Text>
+          </View>
+          <Text style={styles.pagesText}>
+            {book.current_page} of {book.books.total_pages} pages
+          </Text>
+
+          <Text style={styles.sectionTitle}>Your journey</Text>
+
+          <View style={styles.journeyRow}>
+            <View style={styles.journeyBox}>
+              <Text style={styles.journeyLabel}>Started</Text>
+              <Text style={styles.journeyValue}>
+                {book.started_at
+                  ? new Date(book.started_at).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                    })
+                  : "—"}
+              </Text>
+            </View>
+            <View style={styles.journeyBox}>
+              <Text style={styles.journeyLabel}>Reading time</Text>
+              <Text style={styles.journeyValue}>—</Text>
+            </View>
+          </View>
+          <View style={styles.journeyRow}>
+            <View style={styles.journeyBox}>
+              <Text style={styles.journeyLabel}>Current streak</Text>
+              <Text style={styles.journeyValue}>0 days</Text>
+            </View>
+            <View style={styles.journeyBox}>
+              <Text style={styles.journeyLabel}>Average session</Text>
+              <Text style={styles.journeyValue}>—</Text>
+            </View>
+          </View>
+
+          <Pressable style={styles.logButton} onPress={comingSoonLog}>
+            <Ionicons name="add" size={18} color={COLORS.textAccent} />
+            <Text style={styles.logButtonText}>Log reading session</Text>
+          </Pressable>
+
+          <View style={styles.buttonRow}>
+            <Pressable style={styles.outlineButton} onPress={comingSoonThought}>
+              <Ionicons
+                name="create-outline"
+                size={16}
+                color={COLORS.textMain}
+              />
+              <Text style={styles.outlineButtonText}>Write a thought</Text>
+            </Pressable>
+            <Pressable
+              style={styles.outlineButton}
+              onPress={() => setEditPageVisible(true)}
+            >
+              <Ionicons
+                name="pencil-outline"
+                size={16}
+                color={COLORS.textMain}
+              />
+              <Text style={styles.outlineButtonText}>Update progress</Text>
+            </Pressable>
+          </View>
+
+          {isFinished ? (
+            <>
+              <View style={styles.finishedBadge}>
+                <Ionicons
+                  name="checkmark-circle"
+                  size={16}
+                  color={COLORS.success}
+                />
+                <Text style={styles.finishedBadgeText}>
+                  Finished{" "}
+                  {book.finished_at &&
+                    new Date(book.finished_at).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                    })}
+                </Text>
+              </View>
+
+              <View style={styles.rateRow}>
+                <Text style={styles.rateLabel}>Rate book</Text>
+                <View style={{ flexDirection: "row" }}>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Pressable key={star} onPress={() => handleRate(star)}>
+                      <Ionicons
+                        name={
+                          (book.rating ?? 0) >= star ? "star" : "star-outline"
+                        }
+                        size={18}
+                        color={COLORS.rating}
+                        style={{ marginLeft: 3 }}
+                      />
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            </>
+          ) : (
+            <Pressable style={styles.finishButton} onPress={handleMarkFinished}>
+              <Ionicons
+                name="checkmark-circle-outline"
+                size={16}
+                color={COLORS.primaryPink}
+              />
+              <Text style={styles.finishButtonText}>Mark as finished</Text>
+            </Pressable>
+          )}
+        </View>
       </View>
 
-      <View style={styles.content}>
+      <View style={[styles.hero, { top: insets.top }]} pointerEvents="box-none">
+        <View style={styles.topRow}>
+          <Pressable onPress={() => router.back()} style={styles.iconButton}>
+            <Ionicons name="chevron-back" size={24} color={COLORS.textMain} />
+          </Pressable>
+          <Pressable
+            onPress={() => setOptionsMenuVisible(true)}
+            style={styles.iconButton}
+          >
+            <Ionicons
+              name="ellipsis-horizontal"
+              size={22}
+              color={COLORS.textMain}
+            />
+          </Pressable>
+        </View>
+
         <View style={styles.coverStack}>
           <Image
             source={require("@/assets/images/book-flower.png")}
@@ -153,115 +299,6 @@ export default function ReadingRoomScreen() {
             </View>
           )}
         </View>
-
-        <Text style={styles.title} numberOfLines={2}>
-          {book.books.title}
-        </Text>
-        <Text style={styles.author}>{book.books.author}</Text>
-
-        <View style={styles.progressRow}>
-          <View style={styles.progressTrack}>
-            <View
-              style={[
-                styles.progressFill,
-                { width: `${book.progress_percent}%` },
-              ]}
-            />
-          </View>
-          <Text style={styles.progressPercent}>{book.progress_percent}%</Text>
-        </View>
-
-        <Pressable onPress={() => setEditPageVisible(true)}>
-          <Text style={styles.pagesText}>
-            {book.current_page} of {book.books.total_pages} pages{" "}
-            <Ionicons name="pencil" size={12} color={COLORS.textSecondary} />
-          </Text>
-        </Pressable>
-
-        <Text style={styles.sectionTitle}>Your journey</Text>
-
-        <View style={styles.journeyRow}>
-          <View style={styles.journeyBox}>
-            <Text style={styles.journeyLabel}>Started</Text>
-            <Text style={styles.journeyValue}>
-              {book.started_at
-                ? new Date(book.started_at).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                  })
-                : "—"}
-            </Text>
-          </View>
-          <View style={styles.journeyBox}>
-            <Text style={styles.journeyLabel}>Reading time</Text>
-            <Text style={styles.journeyValue}>—</Text>
-          </View>
-        </View>
-        <View style={styles.journeyRow}>
-          <View style={styles.journeyBox}>
-            <Text style={styles.journeyLabel}>Current streak</Text>
-            <Text style={styles.journeyValue}>0 days</Text>
-          </View>
-          <View style={styles.journeyBox}>
-            <Text style={styles.journeyLabel}>Average session</Text>
-            <Text style={styles.journeyValue}>—</Text>
-          </View>
-        </View>
-
-        <Pressable style={styles.logButton} onPress={comingSoonLog}>
-          <Ionicons name="add" size={18} color={COLORS.textAccent} />
-          <Text style={styles.logButtonText}>Log reading session</Text>
-        </Pressable>
-
-        {isFinished ? (
-          <>
-            <View style={styles.finishedBadge}>
-              <Ionicons
-                name="checkmark-circle"
-                size={16}
-                color={COLORS.success}
-              />
-              <Text style={styles.finishedBadgeText}>
-                Finished{" "}
-                {book.finished_at &&
-                  new Date(book.finished_at).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                  })}
-              </Text>
-            </View>
-
-            <View style={styles.rateRow}>
-              <Text style={styles.rateLabel}>Rate book</Text>
-              <View style={{ flexDirection: "row" }}>
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <Pressable key={star} onPress={() => handleRate(star)}>
-                    <Ionicons
-                      name={
-                        (book.rating ?? 0) >= star ? "star" : "star-outline"
-                      }
-                      size={18}
-                      color={COLORS.rating}
-                      style={{ marginLeft: 3 }}
-                    />
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-          </>
-        ) : (
-          <Pressable
-            style={styles.finishButtonSmall}
-            onPress={handleMarkFinished}
-          >
-            <Ionicons
-              name="checkmark-circle-outline"
-              size={15}
-              color={COLORS.primaryPink}
-            />
-            <Text style={styles.finishButtonSmallText}>Mark as finished</Text>
-          </Pressable>
-        )}
       </View>
 
       <Modal
@@ -274,7 +311,7 @@ export default function ReadingRoomScreen() {
           style={styles.menuBackdrop}
           onPress={() => setOptionsMenuVisible(false)}
         >
-          <View style={styles.menuBox}>
+          <View style={[styles.menuBox, { top: insets.top + 44 }]}>
             <Pressable style={styles.menuItem} onPress={openDiary}>
               <Ionicons name="book-outline" size={16} color={COLORS.textMain} />
               <Text style={styles.menuItemText}>Book Diary</Text>
@@ -296,190 +333,48 @@ export default function ReadingRoomScreen() {
         onCancel={() => setEditPageVisible(false)}
         onSubmit={handleUpdatePage}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  safe: { flex: 1, backgroundColor: COLORS.background },
   centered: {
     flex: 1,
     backgroundColor: COLORS.background,
     alignItems: "center",
     justifyContent: "center",
   },
-  topRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingTop: 4,
-  },
-  iconButton: {
-    width: 36,
-    height: 36,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  content: { flex: 1, paddingHorizontal: 24, paddingTop: 2 },
-  coverStack: {
-    width: "100%",
-    height: 160,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 10,
-  },
-  flowerDecoration: {
-    position: "absolute",
-    left: 26,
-    top: 4,
-    width: 128,
-    height: 148,
-  },
-  cover: {
-    width: 100,
-    height: 144,
-    borderRadius: 4,
-    backgroundColor: COLORS.softPink,
-  },
-  coverFallback: { alignItems: "center", justifyContent: "center" },
-  title: {
-    fontFamily: FONTS.serifBold,
-    fontSize: 20,
-    color: COLORS.textMain,
-    textAlign: "center",
-    marginTop: 4,
-  },
-  author: {
-    fontFamily: FONTS.sansRegular,
-    fontSize: 13,
-    color: COLORS.textSecondary,
-    textAlign: "center",
-    marginTop: 2,
-  },
-  progressRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginTop: 10,
-  },
-  progressTrack: {
-    flex: 1,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: COLORS.progressTrack,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: COLORS.primaryPink,
-  },
-  progressPercent: {
-    fontFamily: FONTS.sansSemiBold,
-    fontSize: 12,
-    color: COLORS.textMain,
-  },
-  pagesText: {
-    fontFamily: FONTS.sansRegular,
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    marginTop: 6,
-    marginBottom: 10,
-  },
-  sectionTitle: {
-    fontFamily: FONTS.serifBold,
-    fontSize: 16,
-    color: COLORS.textMain,
-    marginBottom: 8,
-  },
-  journeyRow: { flexDirection: "row", gap: 8, marginBottom: 8 },
-  journeyBox: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 14,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-  },
-  journeyLabel: {
-    fontFamily: FONTS.sansRegular,
-    fontSize: 11,
-    color: COLORS.textSecondary,
-    marginBottom: 2,
-  },
-  journeyValue: {
-    fontFamily: FONTS.serifSemiBold,
-    fontSize: 14,
-    color: COLORS.textMain,
-  },
-  logButton: {
-    flexDirection: "row",
-    backgroundColor: COLORS.softPink,
-    borderRadius: 24,
-    paddingVertical: 11,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    marginTop: 2,
-    marginBottom: 10,
-  },
-  logButtonText: {
-    fontFamily: FONTS.sansSemiBold,
-    fontSize: 14,
-    color: COLORS.textAccent,
-  },
-  finishButtonSmall: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    borderWidth: 1,
-    borderColor: COLORS.primaryPink,
-    borderRadius: 18,
-    paddingVertical: 8,
-  },
-  finishButtonSmallText: {
-    fontFamily: FONTS.sansSemiBold,
-    fontSize: 13,
-    color: COLORS.primaryPink,
-  },
-  finishedBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    marginBottom: 8,
-  },
-  finishedBadgeText: {
-    fontFamily: FONTS.sansMedium,
-    fontSize: 13,
-    color: COLORS.textMain,
-  },
-  rateRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 16,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-  },
-  rateLabel: {
-    fontFamily: FONTS.sansMedium,
-    fontSize: 13,
-    color: COLORS.textMain,
-  },
   emptyText: {
     fontFamily: FONTS.sansRegular,
     fontSize: 15,
     color: COLORS.textSecondary,
   },
+  hero: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: HERO_HEIGHT,
+    alignItems: "center",
+  },
+  topRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "100%",
+    paddingHorizontal: 20,
+    paddingTop: 2,
+  },
+  iconButton: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   menuBackdrop: { flex: 1, backgroundColor: "transparent" },
   menuBox: {
     position: "absolute",
-    top: 54,
     right: 16,
     backgroundColor: COLORS.card,
     borderRadius: 14,
@@ -501,6 +396,196 @@ const styles = StyleSheet.create({
   menuItemText: {
     fontFamily: FONTS.sansMedium,
     fontSize: 14,
+    color: COLORS.textMain,
+  },
+  coverStack: {
+    marginTop: 4,
+    width: 122,
+    height: 130,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  flowerDecoration: {
+    position: "absolute",
+    left: -100,
+    top: -20,
+    width: 128,
+    height: 146,
+  },
+  cover: {
+    width: 122,
+    height: 172,
+    borderRadius: 5,
+    backgroundColor: COLORS.softPink,
+  },
+  coverFallback: { alignItems: "center", justifyContent: "center" },
+  sheet: {
+    flex: 1,
+    marginTop: HERO_HEIGHT - HERO_OVERLAP,
+    backgroundColor: COLORS.card,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+  },
+  sheetContent: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: HERO_OVERLAP + 8,
+    paddingBottom: 10,
+    alignItems: "center",
+  },
+  title: {
+    fontFamily: FONTS.serifBold,
+    fontSize: 22,
+    color: COLORS.textMain,
+    textAlign: "center",
+  },
+  author: {
+    fontFamily: FONTS.sansRegular,
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    textAlign: "center",
+    marginTop: 2,
+    marginBottom: 12,
+  },
+  progressRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    width: "100%",
+  },
+  progressTrack: {
+    flex: 1,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.progressTrack,
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.primaryPink,
+  },
+  progressPercent: {
+    fontFamily: FONTS.sansSemiBold,
+    fontSize: 13,
+    color: COLORS.textMain,
+  },
+  pagesText: {
+    fontFamily: FONTS.sansRegular,
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginTop: 6,
+    marginBottom: 14,
+  },
+  sectionTitle: {
+    fontFamily: FONTS.serifBold,
+    fontSize: 18,
+    color: COLORS.textMain,
+    alignSelf: "flex-start",
+    marginBottom: 8,
+  },
+  journeyRow: { flexDirection: "row", gap: 8, marginBottom: 8, width: "100%" },
+  journeyBox: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 16,
+    paddingVertical: 9,
+    paddingHorizontal: 10,
+  },
+  journeyLabel: {
+    fontFamily: FONTS.sansRegular,
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    marginBottom: 2,
+  },
+  journeyValue: {
+    fontFamily: FONTS.serifSemiBold,
+    fontSize: 15,
+    color: COLORS.textMain,
+  },
+  logButton: {
+    flexDirection: "row",
+    backgroundColor: COLORS.softPink,
+    borderRadius: 24,
+    paddingVertical: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    width: "100%",
+    marginTop: 4,
+    marginBottom: 10,
+  },
+  logButtonText: {
+    fontFamily: FONTS.sansSemiBold,
+    fontSize: 14,
+    color: COLORS.textAccent,
+  },
+  buttonRow: {
+    flexDirection: "row",
+    gap: 10,
+    width: "100%",
+    marginBottom: 10,
+  },
+  outlineButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 20,
+    paddingVertical: 10,
+    backgroundColor: COLORS.card,
+  },
+  outlineButtonText: {
+    fontFamily: FONTS.sansSemiBold,
+    fontSize: 12.5,
+    color: COLORS.textMain,
+  },
+  finishButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    borderWidth: 1,
+    borderColor: COLORS.primaryPink,
+    borderRadius: 20,
+    paddingVertical: 11,
+    width: "100%",
+  },
+  finishButtonText: {
+    fontFamily: FONTS.sansSemiBold,
+    fontSize: 14,
+    color: COLORS.primaryPink,
+  },
+  finishedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginBottom: 8,
+  },
+  finishedBadgeText: {
+    fontFamily: FONTS.sansMedium,
+    fontSize: 13,
+    color: COLORS.textMain,
+  },
+  rateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    width: "100%",
+  },
+  rateLabel: {
+    fontFamily: FONTS.sansMedium,
+    fontSize: 13,
     color: COLORS.textMain,
   },
 });
