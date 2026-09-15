@@ -2,24 +2,24 @@ import NumberPromptModal from "@/components/NumberPromptModal";
 import { resolveCoverSource } from "@/constants/bookCovers";
 import { COLORS, FONTS } from "@/constants/theme";
 import {
-    UserBook,
-    getUserBookById,
-    markAsFinished,
-    rateBook,
-    updateCurrentPage,
+  UserBook,
+  getUserBookById,
+  markAsFinished,
+  rateBook,
+  updateCurrentPage,
 } from "@/services/books";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Alert,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -29,6 +29,7 @@ export default function ReadingRoomScreen() {
   const [book, setBook] = useState<UserBook | null>(null);
   const [loading, setLoading] = useState(true);
   const [editPageVisible, setEditPageVisible] = useState(false);
+  const [optionsMenuVisible, setOptionsMenuVisible] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!id) return;
@@ -36,7 +37,7 @@ export default function ReadingRoomScreen() {
       const bookData = await getUserBookById(id);
       setBook(bookData);
     } catch (e: any) {
-      Alert.alert("Greška", e.message ?? "Nešto je pošlo po zlu.");
+      Alert.alert("Error", e.message ?? "Something went wrong.");
     } finally {
       setLoading(false);
     }
@@ -64,11 +65,11 @@ export default function ReadingRoomScreen() {
     if (!book) return;
     Alert.alert(
       "Mark as finished?",
-      `Da li si sigurna da si završila "${book.books.title}"?`,
+      `Are you sure you finished "${book.books.title}"?`,
       [
-        { text: "Otkaži", style: "cancel" },
+        { text: "Cancel", style: "cancel" },
         {
-          text: "Da, gotova sam",
+          text: "Yes, I'm done",
           onPress: async () => {
             const updated = await markAsFinished(book.id);
             setBook(updated);
@@ -84,8 +85,14 @@ export default function ReadingRoomScreen() {
     setBook(updated);
   };
 
-  const comingSoon = () =>
-    Alert.alert("Uskoro", "Ova funkcija još nije dostupna.");
+  const comingSoonLog = () =>
+    Alert.alert("Coming soon", "Log reading session isn't available yet.");
+
+  const openDiary = () => {
+    if (!book) return;
+    setOptionsMenuVisible(false);
+    router.push(`/diary/${book.book_id}`);
+  };
 
   if (loading) {
     return (
@@ -98,7 +105,7 @@ export default function ReadingRoomScreen() {
   if (!book) {
     return (
       <SafeAreaView style={styles.centered} edges={["top", "bottom"]}>
-        <Text style={styles.emptyText}>Knjiga nije pronađena.</Text>
+        <Text style={styles.emptyText}>Book not found.</Text>
       </SafeAreaView>
     );
   }
@@ -107,6 +114,7 @@ export default function ReadingRoomScreen() {
     book.books.title,
     book.books.cover_url,
   );
+  const isFinished = book.status === "finished";
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
@@ -115,13 +123,9 @@ export default function ReadingRoomScreen() {
           <Ionicons name="chevron-back" size={24} color={COLORS.textMain} />
         </Pressable>
         <Pressable
-          style={styles.diaryButton}
-          onPress={() => router.push(`/diary/${book.book_id}`)}
+          onPress={() => setOptionsMenuVisible(true)}
+          style={styles.iconButton}
         >
-          <Ionicons name="book-outline" size={16} color={COLORS.textMain} />
-          <Text style={styles.diaryButtonText}>Book Diary</Text>
-        </Pressable>
-        <Pressable onPress={comingSoon} style={styles.iconButton}>
           <Ionicons
             name="ellipsis-horizontal"
             size={22}
@@ -130,11 +134,13 @@ export default function ReadingRoomScreen() {
         </Pressable>
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.coverWrap}>
+      <View style={styles.content}>
+        <View style={styles.coverStack}>
+          <Image
+            source={require("@/assets/images/book-flower.png")}
+            style={styles.flowerDecoration}
+            contentFit="contain"
+          />
           {coverSource ? (
             <Image
               source={coverSource}
@@ -143,12 +149,14 @@ export default function ReadingRoomScreen() {
             />
           ) : (
             <View style={[styles.cover, styles.coverFallback]}>
-              <Ionicons name="book" size={40} color={COLORS.primaryPink} />
+              <Ionicons name="book" size={36} color={COLORS.primaryPink} />
             </View>
           )}
         </View>
 
-        <Text style={styles.title}>{book.books.title}</Text>
+        <Text style={styles.title} numberOfLines={2}>
+          {book.books.title}
+        </Text>
         <Text style={styles.author}>{book.books.author}</Text>
 
         <View style={styles.progressRow}>
@@ -166,91 +174,114 @@ export default function ReadingRoomScreen() {
         <Pressable onPress={() => setEditPageVisible(true)}>
           <Text style={styles.pagesText}>
             {book.current_page} of {book.books.total_pages} pages{" "}
-            <Ionicons name="pencil" size={13} color={COLORS.textSecondary} />
+            <Ionicons name="pencil" size={12} color={COLORS.textSecondary} />
           </Text>
         </Pressable>
 
         <Text style={styles.sectionTitle}>Your journey</Text>
 
-        <View style={styles.journeyBox}>
-          <Text style={styles.journeyLabel}>Started</Text>
-          <Text style={styles.journeyValue}>
-            {book.started_at
-              ? new Date(book.started_at).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })
-              : "—"}
-          </Text>
-        </View>
-
-        <Pressable style={styles.comingSoonButton} onPress={comingSoon}>
-          <Ionicons
-            name="time-outline"
-            size={16}
-            color={COLORS.textSecondary}
-          />
-          <Text style={styles.comingSoonButtonText}>
-            Reading time & sessions – coming soon
-          </Text>
-        </Pressable>
-
-        <View style={styles.smallButtonRow}>
-          <Pressable style={styles.smallButton} onPress={comingSoon}>
-            <Ionicons name="create-outline" size={16} color={COLORS.textMain} />
-            <Text style={styles.smallButtonText}>Write a thought</Text>
-          </Pressable>
-          <Pressable
-            style={styles.smallButton}
-            onPress={() => setEditPageVisible(true)}
-          >
-            <Ionicons name="create-outline" size={16} color={COLORS.textMain} />
-            <Text style={styles.smallButtonText}>Update progress</Text>
-          </Pressable>
-        </View>
-
-        {book.status !== "finished" ? (
-          <Pressable style={styles.finishButton} onPress={handleMarkFinished}>
-            <Ionicons
-              name="checkmark-circle-outline"
-              size={18}
-              color={COLORS.primaryPink}
-            />
-            <Text style={styles.finishButtonText}>Mark as finished</Text>
-          </Pressable>
-        ) : (
-          <View style={styles.finishedBadge}>
-            <Ionicons
-              name="checkmark-circle"
-              size={18}
-              color={COLORS.success}
-            />
-            <Text style={styles.finishedBadgeText}>
-              Finished{" "}
-              {book.finished_at &&
-                new Date(book.finished_at).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                })}
+        <View style={styles.journeyRow}>
+          <View style={styles.journeyBox}>
+            <Text style={styles.journeyLabel}>Started</Text>
+            <Text style={styles.journeyValue}>
+              {book.started_at
+                ? new Date(book.started_at).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                  })
+                : "—"}
             </Text>
           </View>
-        )}
-
-        <View style={styles.rateRow}>
-          <Text style={styles.rateLabel}>Rate book:</Text>
-          {[1, 2, 3, 4, 5].map((star) => (
-            <Pressable key={star} onPress={() => handleRate(star)}>
-              <Ionicons
-                name={(book.rating ?? 0) >= star ? "star" : "star-outline"}
-                size={20}
-                color={COLORS.rating}
-                style={{ marginLeft: 4 }}
-              />
-            </Pressable>
-          ))}
+          <View style={styles.journeyBox}>
+            <Text style={styles.journeyLabel}>Reading time</Text>
+            <Text style={styles.journeyValue}>—</Text>
+          </View>
         </View>
-      </ScrollView>
+        <View style={styles.journeyRow}>
+          <View style={styles.journeyBox}>
+            <Text style={styles.journeyLabel}>Current streak</Text>
+            <Text style={styles.journeyValue}>0 days</Text>
+          </View>
+          <View style={styles.journeyBox}>
+            <Text style={styles.journeyLabel}>Average session</Text>
+            <Text style={styles.journeyValue}>—</Text>
+          </View>
+        </View>
+
+        <Pressable style={styles.logButton} onPress={comingSoonLog}>
+          <Ionicons name="add" size={18} color={COLORS.textAccent} />
+          <Text style={styles.logButtonText}>Log reading session</Text>
+        </Pressable>
+
+        {isFinished ? (
+          <>
+            <View style={styles.finishedBadge}>
+              <Ionicons
+                name="checkmark-circle"
+                size={16}
+                color={COLORS.success}
+              />
+              <Text style={styles.finishedBadgeText}>
+                Finished{" "}
+                {book.finished_at &&
+                  new Date(book.finished_at).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                  })}
+              </Text>
+            </View>
+
+            <View style={styles.rateRow}>
+              <Text style={styles.rateLabel}>Rate book</Text>
+              <View style={{ flexDirection: "row" }}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Pressable key={star} onPress={() => handleRate(star)}>
+                    <Ionicons
+                      name={
+                        (book.rating ?? 0) >= star ? "star" : "star-outline"
+                      }
+                      size={18}
+                      color={COLORS.rating}
+                      style={{ marginLeft: 3 }}
+                    />
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          </>
+        ) : (
+          <Pressable
+            style={styles.finishButtonSmall}
+            onPress={handleMarkFinished}
+          >
+            <Ionicons
+              name="checkmark-circle-outline"
+              size={15}
+              color={COLORS.primaryPink}
+            />
+            <Text style={styles.finishButtonSmallText}>Mark as finished</Text>
+          </Pressable>
+        )}
+      </View>
+
+      <Modal
+        visible={optionsMenuVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setOptionsMenuVisible(false)}
+      >
+        <Pressable
+          style={styles.menuBackdrop}
+          onPress={() => setOptionsMenuVisible(false)}
+        >
+          <View style={styles.menuBox}>
+            <Pressable style={styles.menuItem} onPress={openDiary}>
+              <Ionicons name="book-outline" size={16} color={COLORS.textMain} />
+              <Text style={styles.menuItemText}>Book Diary</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
 
       <NumberPromptModal
         visible={editPageVisible}
@@ -282,7 +313,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingTop: 4,
   },
   iconButton: {
     width: 36,
@@ -290,46 +321,48 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  diaryButton: {
-    flexDirection: "row",
+  content: { flex: 1, paddingHorizontal: 24, paddingTop: 2 },
+  coverStack: {
+    width: "100%",
+    height: 160,
     alignItems: "center",
-    gap: 6,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    backgroundColor: COLORS.card,
+    justifyContent: "center",
+    marginBottom: 10,
   },
-  diaryButtonText: {
-    fontFamily: FONTS.sansMedium,
-    fontSize: 13,
-    color: COLORS.textMain,
+  flowerDecoration: {
+    position: "absolute",
+    left: 26,
+    top: 4,
+    width: 128,
+    height: 148,
   },
-  scrollContent: { paddingHorizontal: 24, paddingBottom: 40 },
-  coverWrap: { alignItems: "center", marginTop: 12, marginBottom: 18 },
   cover: {
-    width: 150,
-    height: 214,
+    width: 100,
+    height: 144,
     borderRadius: 4,
     backgroundColor: COLORS.softPink,
   },
   coverFallback: { alignItems: "center", justifyContent: "center" },
   title: {
     fontFamily: FONTS.serifBold,
-    fontSize: 22,
+    fontSize: 20,
     color: COLORS.textMain,
     textAlign: "center",
+    marginTop: 4,
   },
   author: {
     fontFamily: FONTS.sansRegular,
-    fontSize: 15,
+    fontSize: 13,
     color: COLORS.textSecondary,
     textAlign: "center",
-    marginTop: 4,
-    marginBottom: 18,
+    marginTop: 2,
   },
-  progressRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  progressRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 10,
+  },
   progressTrack: {
     flex: 1,
     height: 8,
@@ -344,119 +377,130 @@ const styles = StyleSheet.create({
   },
   progressPercent: {
     fontFamily: FONTS.sansSemiBold,
-    fontSize: 14,
+    fontSize: 12,
     color: COLORS.textMain,
-    width: 40,
-    textAlign: "right",
   },
   pagesText: {
     fontFamily: FONTS.sansRegular,
-    fontSize: 13,
+    fontSize: 12,
     color: COLORS.textSecondary,
-    marginTop: 8,
-    marginBottom: 24,
+    marginTop: 6,
+    marginBottom: 10,
   },
   sectionTitle: {
     fontFamily: FONTS.serifBold,
-    fontSize: 19,
+    fontSize: 16,
     color: COLORS.textMain,
-    marginBottom: 12,
+    marginBottom: 8,
   },
+  journeyRow: { flexDirection: "row", gap: 8, marginBottom: 8 },
   journeyBox: {
-    backgroundColor: COLORS.card,
-    borderRadius: 16,
+    flex: 1,
     borderWidth: 1,
     borderColor: COLORS.border,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    marginBottom: 10,
+    borderRadius: 14,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
   },
   journeyLabel: {
     fontFamily: FONTS.sansRegular,
-    fontSize: 12,
+    fontSize: 11,
     color: COLORS.textSecondary,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   journeyValue: {
     fontFamily: FONTS.serifSemiBold,
-    fontSize: 16,
+    fontSize: 14,
     color: COLORS.textMain,
   },
-  comingSoonButton: {
+  logButton: {
     flexDirection: "row",
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    backgroundColor: COLORS.softPink,
     borderRadius: 24,
-    paddingVertical: 13,
+    paddingVertical: 11,
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    marginBottom: 14,
+    marginTop: 2,
+    marginBottom: 10,
   },
-  comingSoonButtonText: {
-    fontFamily: FONTS.sansMedium,
-    fontSize: 13,
-    color: COLORS.textSecondary,
+  logButtonText: {
+    fontFamily: FONTS.sansSemiBold,
+    fontSize: 14,
+    color: COLORS.textAccent,
   },
-  smallButtonRow: { flexDirection: "row", gap: 10, marginBottom: 14 },
-  smallButton: {
-    flex: 1,
+  finishButtonSmall: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 20,
-    paddingVertical: 12,
-  },
-  smallButtonText: {
-    fontFamily: FONTS.sansMedium,
-    fontSize: 13,
-    color: COLORS.textMain,
-  },
-  finishButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
     borderWidth: 1,
     borderColor: COLORS.primaryPink,
-    borderRadius: 24,
-    paddingVertical: 14,
-    marginBottom: 16,
+    borderRadius: 18,
+    paddingVertical: 8,
   },
-  finishButtonText: {
+  finishButtonSmallText: {
     fontFamily: FONTS.sansSemiBold,
-    fontSize: 15,
+    fontSize: 13,
     color: COLORS.primaryPink,
   },
   finishedBadge: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    marginBottom: 16,
+    gap: 6,
+    marginBottom: 8,
   },
   finishedBadgeText: {
     fontFamily: FONTS.sansMedium,
-    fontSize: 14,
+    fontSize: 13,
     color: COLORS.textMain,
   },
   rateRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
   },
   rateLabel: {
     fontFamily: FONTS.sansMedium,
-    fontSize: 14,
+    fontSize: 13,
     color: COLORS.textMain,
-    marginRight: 6,
   },
   emptyText: {
     fontFamily: FONTS.sansRegular,
     fontSize: 15,
     color: COLORS.textSecondary,
+  },
+  menuBackdrop: { flex: 1, backgroundColor: "transparent" },
+  menuBox: {
+    position: "absolute",
+    top: 54,
+    right: 16,
+    backgroundColor: COLORS.card,
+    borderRadius: 14,
+    paddingVertical: 4,
+    minWidth: 150,
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  menuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+  },
+  menuItemText: {
+    fontFamily: FONTS.sansMedium,
+    fontSize: 14,
+    color: COLORS.textMain,
   },
 });

@@ -2,9 +2,9 @@ import NumberPromptModal from "@/components/NumberPromptModal";
 import { resolveCoverSource } from "@/constants/bookCovers";
 import { COLORS, FONTS } from "@/constants/theme";
 import {
-    UserBook,
-    getCurrentlyReadingBook,
-    updateCurrentPage,
+  UserBook,
+  getCurrentlyReadingBook,
+  updateCurrentPage,
 } from "@/services/books";
 import { supabase } from "@/services/supabase";
 import { Ionicons } from "@expo/vector-icons";
@@ -12,17 +12,23 @@ import { Image } from "expo-image";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Pressable,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 export default function HomeScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = 56 + insets.bottom;
   const [book, setBook] = useState<UserBook | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
@@ -95,8 +101,15 @@ export default function HomeScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-      <View style={styles.scrollContent}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: tabBarHeight + 24 },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.headerRow}>
           <View style={{ flex: 1 }}>
             <Text style={styles.greeting}>Welcome back, {userName}!</Text>
@@ -129,45 +142,48 @@ export default function HomeScreen() {
                   <Ionicons name="book" size={28} color={COLORS.primaryPink} />
                 </View>
               )}
+
               <View style={styles.bookInfo}>
                 <Text style={styles.bookTitle} numberOfLines={2}>
                   {book.books.title}
                 </Text>
                 <Text style={styles.bookAuthor}>{book.books.author}</Text>
+
+                <View style={styles.progressRow}>
+                  <View style={styles.progressTrack}>
+                    <View
+                      style={[
+                        styles.progressFill,
+                        { width: `${book.progress_percent}%` },
+                      ]}
+                    />
+                  </View>
+                  <Text style={styles.progressPercent}>
+                    {book.progress_percent}%
+                  </Text>
+                </View>
+
+                <Pressable onPress={() => setEditPageVisible(true)}>
+                  <Text style={styles.pagesText}>
+                    {book.current_page} of {book.books.total_pages} pages{" "}
+                    <Ionicons
+                      name="pencil"
+                      size={12}
+                      color={COLORS.textSecondary}
+                    />
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  style={styles.continueButton}
+                  onPress={() => router.push(`/reading-room/${book.id}`)}
+                >
+                  <Text style={styles.continueButtonText}>
+                    Continue reading
+                  </Text>
+                </Pressable>
               </View>
             </View>
-
-            <View style={styles.progressRow}>
-              <View style={styles.progressTrack}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    { width: `${book.progress_percent}%` },
-                  ]}
-                />
-              </View>
-              <Text style={styles.progressPercent}>
-                {book.progress_percent}%
-              </Text>
-            </View>
-
-            <Pressable onPress={() => setEditPageVisible(true)}>
-              <Text style={styles.pagesText}>
-                {book.current_page} of {book.books.total_pages} pages{" "}
-                <Ionicons
-                  name="pencil"
-                  size={13}
-                  color={COLORS.textSecondary}
-                />
-              </Text>
-            </Pressable>
-
-            <Pressable
-              style={styles.continueButton}
-              onPress={() => router.push(`/reading-room/${book.id}`)}
-            >
-              <Text style={styles.continueButtonText}>Continue reading</Text>
-            </Pressable>
           </View>
         ) : (
           <View style={styles.card}>
@@ -226,7 +242,7 @@ export default function HomeScreen() {
             </View>
           </View>
         </View>
-      </View>
+      </ScrollView>
 
       {book && (
         <NumberPromptModal
@@ -255,11 +271,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  scrollContent: {
-    flex: 1,
+  scroll: { flex: 1 },
+  content: {
     paddingHorizontal: 20,
-    paddingTop: 4,
-    paddingBottom: 10,
+    paddingTop: 6,
+    paddingBottom: 48,
   },
   headerRow: {
     flexDirection: "row",
@@ -294,8 +310,8 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: COLORS.card,
     borderRadius: 22,
-    padding: 15,
-    marginBottom: 12,
+    padding: 16,
+    marginBottom: 14,
   },
   cardTitle: {
     fontFamily: FONTS.serifBold,
@@ -303,15 +319,15 @@ const styles = StyleSheet.create({
     color: COLORS.textMain,
     marginBottom: 10,
   },
-  bookRow: { flexDirection: "row", marginBottom: 10 },
+  bookRow: { flexDirection: "row" },
   cover: {
-    width: 62,
-    height: 88,
-    borderRadius: 4,
+    width: 92,
+    height: 136,
+    borderRadius: 6,
     backgroundColor: COLORS.softPink,
   },
   coverFallback: { alignItems: "center", justifyContent: "center" },
-  bookInfo: { flex: 1, marginLeft: 14, justifyContent: "center" },
+  bookInfo: { flex: 1, marginLeft: 14 },
   bookTitle: {
     fontFamily: FONTS.serifSemiBold,
     fontSize: 17,
@@ -323,32 +339,34 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: 4,
   },
-  progressRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  progressRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 14,
+  },
   progressTrack: {
     flex: 1,
-    height: 8,
+    height: 7,
     borderRadius: 4,
     backgroundColor: COLORS.progressTrack,
     overflow: "hidden",
   },
   progressFill: {
-    height: 8,
+    height: 7,
     borderRadius: 4,
     backgroundColor: COLORS.primaryPink,
   },
   progressPercent: {
     fontFamily: FONTS.sansSemiBold,
-    fontSize: 13,
+    fontSize: 12,
     color: COLORS.textMain,
-    width: 36,
-    textAlign: "right",
   },
   pagesText: {
     fontFamily: FONTS.sansRegular,
-    fontSize: 13,
+    fontSize: 12,
     color: COLORS.textSecondary,
     marginTop: 6,
-    marginBottom: 12,
   },
   emptyText: {
     fontFamily: FONTS.sansRegular,
@@ -358,16 +376,17 @@ const styles = StyleSheet.create({
   },
   continueButton: {
     backgroundColor: COLORS.softPink,
-    borderRadius: 24,
-    paddingVertical: 12,
+    borderRadius: 20,
+    paddingVertical: 11,
     alignItems: "center",
+    marginTop: 10,
   },
   continueButtonText: {
     fontFamily: FONTS.sansSemiBold,
-    fontSize: 15,
+    fontSize: 14,
     color: COLORS.textAccent,
   },
-  statsRow: { flexDirection: "row", gap: 10, marginBottom: 16 },
+  statsRow: { flexDirection: "row", gap: 10, marginBottom: 14 },
   statBox: {
     flex: 1,
     backgroundColor: COLORS.background,
@@ -426,7 +445,7 @@ const styles = StyleSheet.create({
     left: 0,
     bottom: 0,
     width: 140,
-    height: 150,
+    height: 120,
   },
   quoteTextWrap: {
     paddingLeft: 118,
