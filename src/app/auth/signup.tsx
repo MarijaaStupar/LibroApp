@@ -6,13 +6,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    StyleSheet,
-    Text,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -47,6 +47,10 @@ export default function SignupScreen() {
     if (signUpError) {
       setError(signUpError.message);
       return;
+    }
+
+    if (data.user) {
+      await supabase.from("users").upsert({ id: data.user.id, name, username });
     }
 
     if (data.session) {
