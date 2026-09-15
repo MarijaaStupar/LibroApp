@@ -42,6 +42,25 @@ export async function getCurrentlyReadingBook(): Promise<UserBook | null> {
   return data as unknown as UserBook | null;
 }
 
+export async function getAllUserBooks(): Promise<UserBook[]> {
+  const { data, error } = await supabase
+    .from("user_books")
+    .select(USER_BOOK_SELECT)
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return (data ?? []) as unknown as UserBook[];
+}
+
+export async function removeUserBook(userBookId: string): Promise<void> {
+  const { error } = await supabase
+    .from("user_books")
+    .delete()
+    .eq("id", userBookId);
+
+  if (error) throw error;
+}
+
 export async function getUserBookById(id: string): Promise<UserBook | null> {
   const { data, error } = await supabase
     .from("user_books")
@@ -94,4 +113,26 @@ export async function rateBook(userBookId: string, rating: number) {
 
   if (error) throw error;
   return data as unknown as UserBook;
+}
+
+export type BookDetails = BookCatalog & {
+  description: string | null;
+  published_date: string | null;
+  average_rating: number | null;
+  ratings_count: number | null;
+  genres: string[] | null;
+  subjects: string[] | null;
+};
+
+export async function getBookDetails(id: string): Promise<BookDetails | null> {
+  const { data, error } = await supabase
+    .from("books")
+    .select(
+      "id, title, author, cover_url, total_pages, description, published_date, average_rating, ratings_count, genres, subjects",
+    )
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data as BookDetails | null;
 }
