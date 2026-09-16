@@ -1,56 +1,111 @@
-# Welcome to your Expo app 👋
+# 📖 Libro
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Libro je mobilna aplikacija za praćenje čitanja knjiga, razvijena kao seminarski rad iz predmeta **RMAS** (Razvoj mobilnih aplikacija i sistema).
 
-## Get started
+Aplikacija korisniku omogućava da vodi evidenciju o knjigama koje čita, postavlja ciljeve čitanja, vodi dnevnik čitanja, organizuje knjige u kolekcije i deli svoje omiljene naslove sa drugima.
 
-1. Install dependencies
+## Sadržaj
+
+- [Funkcionalnosti](#funkcionalnosti)
+- [Korišćene tehnologije](#korišćene-tehnologije)
+- [Native funkcionalnosti uređaja](#native-funkcionalnosti-uređaja)
+- [Struktura projekta](#struktura-projekta)
+- [Pokretanje aplikacije](#pokretanje-aplikacije)
+- [Build (EAS)](#build-eas)
+
+## Funkcionalnosti
+
+- Registracija i prijava korisnika, čuvanje korisničke sesije (Supabase Auth)
+- Onboarding ekrani za nove korisnike
+- Pretraga i istraživanje knjiga (Explore)
+- Biblioteka korisnika sa statusima knjiga (za čitanje, trenutno čita, pročitano)
+- Detaljan prikaz knjige (opis, ocena, žanrovi, broj strana)
+- Reading Room — praćenje napretka čitanja u realnom vremenu
+- Dnevnik čitanja (Reading Diary) po knjizi
+- Kolekcije — grupisanje knjiga po sopstvenim listama
+- Ciljevi čitanja i statistika (Journey)
+- Profil korisnika sa profilnom slikom, bio opisom i podešavanjima
+- Deljenje knjige sa drugima (native Share)
+- Podsetnik za čitanje (lokalne notifikacije)
+- Indikatori učitavanja i obrada grešaka kroz celu aplikaciju
+
+## Korišćene tehnologije
+
+- [React Native](https://reactnative.dev/) (0.86) + [Expo](https://expo.dev/) (SDK 57)
+- [Expo Router](https://docs.expo.dev/router/introduction/) — file-based navigacija
+- [TypeScript](https://www.typescriptlang.org/)
+- [Supabase](https://supabase.com/) — autentifikacija i baza podataka (PostgreSQL)
+- [AsyncStorage](https://react-native-async-storage.github.io/async-storage/) — lokalno čuvanje podataka na uređaju
+- `expo-image`, `expo-image-picker`, `expo-notifications`, `expo-constants`
+- Google Fonts: Cormorant Garamond i Inter
+
+## Native funkcionalnosti uređaja
+
+Aplikacija koristi tri native funkcionalnosti mobilnog uređaja:
+
+1. **Kamera i galerija** — korisnik može da slika ili izabere sliku iz galerije za profilnu sliku (`expo-image-picker`).
+2. **Lokalne notifikacije** — dnevni podsetnik za čitanje u odabrano vreme (`expo-notifications`). Napomena: zbog ograničenja Expo Go aplikacije na Androidu (SDK 53+), notifikacije rade samo u pravom (EAS) build-u aplikacije, ne u Expo Go razvojnom režimu — u Expo Go korisnik dobija jasnu poruku da funkcija zahteva build.
+3. **Deljenje (native Share)** — deljenje trenutno pročitane knjige preko sistemskog menija za deljenje (React Native `Share` API).
+
+## Struktura projekta
+
+```
+src/
+  app/            Ekrani aplikacije (Expo Router — file-based navigacija)
+    auth/         Login, Signup
+    onboarding/   Onboarding ekrani (step1-3)
+    tabs/         Glavna tab navigacija (Home, Explore, Library, Journey, Profile)
+    book/         Detalji knjige
+    reading-room/ Praćenje čitanja u toku
+    diary/        Dnevnik čitanja
+    collections/  Kolekcije knjiga
+  components/     Deljene UI komponente
+  constants/      Teme, boje, fontovi, storage ključevi
+  services/       Komunikacija sa Supabase-om i poslovna logika (books, collections, diary, profile, notifications...)
+  hooks/          Custom React hooks
+```
+
+## Pokretanje aplikacije
+
+### Preduslovi
+
+- [Node.js](https://nodejs.org/) (18+)
+- [Expo Go](https://expo.dev/go) aplikacija na telefonu (Android/iOS), ili Android/iOS emulator
+- Supabase projekat (URL i anon key)
+
+### Koraci
+
+1. Kloniraj repozitorijum i instaliraj zavisnosti:
 
    ```bash
+   git clone <URL_REPOZITORIJUMA>
+   cd Libro
    npm install
    ```
 
-2. Start the app
+2. Napravi `.env` fajl u root folderu projekta (na osnovu `.env.example`) i popuni Supabase podatke:
+
+   ```
+   EXPO_PUBLIC_SUPABASE_URL=https://tvoj-projekat.supabase.co
+   EXPO_PUBLIC_SUPABASE_ANON_KEY=tvoj-anon-key
+   ```
+
+3. Pokreni razvojni server:
 
    ```bash
    npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+4. Skeniraj QR kod Expo Go aplikacijom na telefonu, ili pokreni na emulatoru (`npx expo start --android` / `--ios`).
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## Build (EAS)
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+Za produkcionu/preview verziju aplikacije koristi se [Expo EAS Build](https://docs.expo.dev/build/introduction/):
 
 ```bash
-npm run reset-project
+npm install -g eas-cli
+eas login
+eas build --profile preview --platform android
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-### Other setup steps
-
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Link ka preview build-u će biti dodat ovde nakon završenog build-a.
