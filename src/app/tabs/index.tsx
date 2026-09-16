@@ -6,7 +6,7 @@ import {
   getCurrentlyReadingBook,
   updateCurrentPage,
 } from "@/services/books";
-import { supabase } from "@/services/supabase";
+import { getMyProfile } from "@/services/profile";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -33,28 +33,15 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
   const [userName, setUserName] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [editPageVisible, setEditPageVisible] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
       setErrorMsg("");
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      let name = "Reader";
-      if (user) {
-        const { data: profile } = await supabase
-          .from("users")
-          .select("name")
-          .eq("id", user.id)
-          .maybeSingle();
-        name =
-          profile?.name ||
-          (user.user_metadata?.name as string | undefined) ||
-          "Reader";
-      }
-      setUserName(name);
+      const profile = await getMyProfile();
+      setUserName(profile.name);
+      setAvatarUrl(profile.avatarUrl);
 
       const currentBook = await getCurrentlyReadingBook();
       setBook(currentBook);
@@ -118,7 +105,15 @@ export default function HomeScreen() {
           <Pressable
             style={styles.avatar}
             onPress={() => router.push("/tabs/profile")}
-          />
+          >
+            {avatarUrl && (
+              <Image
+                source={{ uri: avatarUrl }}
+                style={styles.avatarImage}
+                contentFit="cover"
+              />
+            )}
+          </Pressable>
         </View>
 
         {!!errorMsg && <Text style={styles.errorText}>{errorMsg}</Text>}
@@ -299,6 +294,11 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     backgroundColor: COLORS.border,
     marginLeft: 12,
+    overflow: "hidden",
+  },
+  avatarImage: {
+    width: 44,
+    height: 44,
   },
   errorText: {
     fontFamily: FONTS.sansRegular,

@@ -33,7 +33,15 @@
           "imageWidth": 76
         }
       ],
-      "expo-font"
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Libro traži pristup galeriji da bi mogla da izabereš profilnu sliku.",
+          "cameraPermission": "Libro traži pristup kameri da bi mogla da slikaš profilnu sliku."
+        }
+      ],
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true,

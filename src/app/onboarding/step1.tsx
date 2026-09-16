@@ -1,5 +1,7 @@
+import { ONBOARDING_SEEN_KEY } from "@/constants/storageKeys";
 import { COLORS, FONTS } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
@@ -8,12 +10,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 export default function Onboarding1Screen() {
   const router = useRouter();
 
+  const skip = () => {
+    AsyncStorage.setItem(ONBOARDING_SEEN_KEY, "1");
+    router.replace("/auth/login");
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-      <Pressable
-        onPress={() => router.replace("/auth/login")}
-        style={styles.skipButton}
-      >
+      <Pressable onPress={skip} style={styles.skipButton}>
         <Text style={styles.skipText}>Skip</Text>
       </Pressable>
 

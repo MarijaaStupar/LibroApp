@@ -19,6 +19,7 @@ import {
   Modal,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   View,
@@ -97,8 +98,14 @@ export default function BookDetailsScreen() {
   const comingSoonStart = () =>
     Alert.alert("Uskoro", "Otvaranje knjige za čitanje biće uskoro dostupno.");
 
-  const comingSoonShare = () =>
-    Alert.alert("Uskoro", "Deljenje knjige biće uskoro dostupno.");
+  const handleShare = async () => {
+    if (!book) return;
+    try {
+      await Share.share({
+        message: `Čitam "${book.title}" od ${book.author} 📖 Pratim sve svoje knjige u Libro aplikaciji!`,
+      });
+    } catch {}
+  };
 
   if (loading) {
     return (
@@ -265,7 +272,7 @@ export default function BookDetailsScreen() {
           <Pressable onPress={() => router.back()} style={styles.iconButton}>
             <Ionicons name="chevron-back" size={24} color={COLORS.textMain} />
           </Pressable>
-          <Pressable onPress={comingSoonShare} style={styles.iconButton}>
+          <Pressable onPress={handleShare} style={styles.iconButton}>
             <Ionicons name="share-outline" size={22} color={COLORS.textMain} />
           </Pressable>
         </View>

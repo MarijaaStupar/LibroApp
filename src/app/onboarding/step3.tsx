@@ -1,5 +1,7 @@
+import { ONBOARDING_SEEN_KEY } from "@/constants/storageKeys";
 import { COLORS, FONTS } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text } from "react-native";
@@ -7,6 +9,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Onboarding3Screen() {
   const router = useRouter();
+
+  const finish = () => {
+    AsyncStorage.setItem(ONBOARDING_SEEN_KEY, "1");
+    router.replace("/auth/login");
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={["bottom"]}>
@@ -21,10 +28,7 @@ export default function Onboarding3Screen() {
         Set goals, save your thoughts and watch your reading life grow.
       </Text>
 
-      <Pressable
-        style={styles.startButton}
-        onPress={() => router.replace("/auth/login")}
-      >
+      <Pressable style={styles.startButton} onPress={finish}>
         <Text style={styles.startButtonText}>Let's begin</Text>
         <Ionicons name="arrow-forward" size={20} color={COLORS.white} />
       </Pressable>

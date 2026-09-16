@@ -1,9 +1,14 @@
 import { COLORS, FONTS } from "@/constants/theme";
 import { getAllUserBooks } from "@/services/books";
-import { getMyProfile, updateMyBio } from "@/services/profile";
+import { getMyProfile, updateMyAvatar, updateMyBio } from "@/services/profile";
 import { supabase } from "@/services/supabase";
+import {
+  isReadingReminderEnabled,
+  setReadingReminder,
+} from "@/services/notifications";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
@@ -12,6 +17,7 @@ import {
   Modal,
   Pressable,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -44,6 +50,7 @@ export default function ProfileScreen() {
   const [bioEditVisible, setBioEditVisible] = useState(false);
   const [bioDraft, setBioDraft] = useState("");
   const [savingBio, setSavingBio] = useState(false);
+  const [reminderEnabled, setReminderEnabled] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -59,6 +66,8 @@ export default function ProfileScreen() {
       setPagesCount(
         finished.reduce((sum, b) => sum + (b.books?.total_pages ?? 0), 0),
       );
+
+      setReminderEnabled(await isReadingReminderEnabled());
     } catch {
     } finally {
       setLoading(false);
@@ -71,14 +80,64 @@ export default function ProfileScreen() {
     }, [loadData]),
   );
 
-  const comingSoonPhoto = () =>
-    Alert.alert(
-      "Uskoro",
-      "Biranje slike iz galerije ili slikanje biće dostupno kad dodamo pristup kameri/galeriji.",
-    );
-
   const comingSoon = () =>
     Alert.alert("Uskoro", "Ova funkcionalnost još nije dostupna.");
+
+  const saveAvatar = async (uri: string) => {
+    try {
+      await updateMyAvatar(uri);
+      setAvatarUrl(uri);
+    } catch (e: any) {
+      Alert.alert("Greška", e.message ?? "Nije uspelo čuvanje slike.");
+    }
+  };
+
+  const takePhoto = async () => {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert(
+        "Nema dozvole",
+        "Dozvoli pristup kameri u podešavanjima telefona.",
+      );
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets[0]) {
+      await saveAvatar(result.assets[0].uri);
+    }
+  };
+
+  const pickFromLibrary = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert(
+        "Nema dozvole",
+        "Dozvoli pristup galeriji u podešavanjima telefona.",
+      );
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets[0]) {
+      await saveAvatar(result.assets[0].uri);
+    }
+  };
+
+  const handlePickAvatar = () => {
+    Alert.alert("Profilna slika", "Izaberi opciju", [
+      { text: "Slikaj", onPress: takePhoto },
+      { text: "Izaberi iz galerije", onPress: pickFromLibrary },
+      { text: "Otkaži", style: "cancel" },
+    ]);
+  };
 
   const handleLogout = async () => {
     setSettingsVisible(false);
@@ -86,9 +145,25 @@ export default function ProfileScreen() {
     router.replace("/auth/login");
   };
 
+  const handleToggleReminder = async (value: boolean) => {
+    const ok = await setReadingReminder(value);
+    if (!ok) {
+      Alert.alert(
+        "Nedostupno u Expo Go",
+        "Notifikacije na Androidu rade samo u pravom (EAS) build-u aplikacije, ne u Expo Go razvojnom režimu.",
+      );
+      return;
+    }
+    setReminderEnabled(value);
+  };
+
   const handleLinkPress = (key: (typeof LINKS)[number]["key"]) => {
     if (key === "collections") {
       router.push("/collections");
+      return;
+    }
+    if (key === "diary") {
+      router.push("/tabs/library");
       return;
     }
     comingSoon();
@@ -137,7 +212,7 @@ export default function ProfileScreen() {
           </Pressable>
         </View>
 
-        <Pressable style={styles.avatarWrap} onPress={comingSoonPhoto}>
+        <Pressable style={styles.avatarWrap} onPress={handlePickAvatar}>
           {avatarUrl ? (
             <Image
               source={{ uri: avatarUrl }}
@@ -223,7 +298,23 @@ export default function ProfileScreen() {
           onPress={() => setSettingsVisible(false)}
         >
           <View style={[styles.menuBox, { top: insets.top + 40, right: 20 }]}>
-            <Pressable style={styles.menuItem} onPress={handleLogout}>
+            <View style={styles.menuItem}>
+              <Ionicons
+                name="notifications-outline"
+                size={17}
+                color={COLORS.textMain}
+              />
+              <Text style={styles.menuItemText}>Daily reminder</Text>
+              <View style={{ flex: 1 }} />
+              <Switch
+                value={reminderEnabled}
+                onValueChange={handleToggleReminder}
+              />
+            </View>
+            <Pressable
+              style={[styles.menuItem, styles.menuItemDivider]}
+              onPress={handleLogout}
+            >
               <Ionicons name="log-out-outline" size={17} color="#C0392B" />
               <Text style={[styles.menuItemText, { color: "#C0392B" }]}>
                 Log out
@@ -436,7 +527,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.card,
     borderRadius: 14,
     paddingVertical: 4,
-    minWidth: 160,
+    minWidth: 220,
     shadowColor: "#000",
     shadowOpacity: 0.15,
     shadowRadius: 8,
@@ -449,6 +540,10 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 12,
     paddingHorizontal: 16,
+  },
+  menuItemDivider: {
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
   },
   menuItemText: {
     fontFamily: FONTS.sansMedium,

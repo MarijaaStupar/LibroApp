@@ -61,3 +61,16 @@ export async function updateMyBio(bio: string): Promise<void> {
     .eq("id", user.id);
   if (error) throw error;
 }
+
+export async function updateMyAvatar(avatarUrl: string): Promise<void> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nisi ulogovana.");
+
+  const { error } = await supabase
+    .from("users")
+    .update({ avatar_url: avatarUrl })
+    .eq("id", user.id);
+  if (error) throw error;
+}
