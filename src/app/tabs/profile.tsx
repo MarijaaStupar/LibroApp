@@ -1,6 +1,10 @@
 import { COLORS, FONTS } from "@/constants/theme";
 import { getAllUserBooks } from "@/services/books";
-import { getMyProfile, updateMyAvatar, updateMyBio } from "@/services/profile";
+import {
+  getMyProfile,
+  updateMyAvatar,
+  updateMyBio,
+} from "@/services/profile";
 import { supabase } from "@/services/supabase";
 import {
   isReadingReminderEnabled,
@@ -85,6 +89,9 @@ export default function ProfileScreen() {
 
   const saveAvatar = async (uri: string) => {
     try {
+      // Napomena: slika se čuva samo lokalno (bez Supabase Storage-a) zbog
+      // vremenskog pritiska pred odbranu - RLS na storage.objects je
+      // odbijao upload i pored ispravno podešenih pravila.
       await updateMyAvatar(uri);
       setAvatarUrl(uri);
     } catch (e: any) {
@@ -146,15 +153,31 @@ export default function ProfileScreen() {
   };
 
   const handleToggleReminder = async (value: boolean) => {
-    const ok = await setReadingReminder(value);
-    if (!ok) {
+    const result = await setReadingReminder(value);
+    if (result.ok) {
+      setReminderEnabled(value);
+      return;
+    }
+    if (result.reason === "expo-go") {
       Alert.alert(
         "Nedostupno u Expo Go",
         "Notifikacije na Androidu rade samo u pravom (EAS) build-u aplikacije, ne u Expo Go razvojnom režimu.",
       );
       return;
     }
-    setReminderEnabled(value);
+    if (result.reason === "permission-denied") {
+      Alert.alert(
+        "Dozvola nije data",
+        "Uključi notifikacije za Libro u podešavanjima telefona (Podešavanja → Aplikacije → Libro → Notifikacije), pa pokušaj ponovo.",
+      );
+      return;
+    }
+    Alert.alert(
+      "Greška",
+      result.message
+        ? `Nije uspelo uključivanje podsetnika: ${result.message}`
+        : "Nije uspelo uključivanje podsetnika. Pokušaj ponovo.",
+    );
   };
 
   const handleLinkPress = (key: (typeof LINKS)[number]["key"]) => {

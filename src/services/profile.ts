@@ -1,4 +1,6 @@
 import { supabase } from "@/services/supabase";
+import { decode } from "base64-arraybuffer";
+import * as FileSystem from "expo-file-system/legacy";
 
 export type MyProfile = {
   id: string;
@@ -72,5 +74,33 @@ export async function updateMyAvatar(avatarUrl: string): Promise<void> {
     .from("users")
     .update({ avatar_url: avatarUrl })
     .eq("id", user.id);
-  if (error) throw error;
+  if (error) {
+    console.log("[DEBUG updateMyAvatar]", JSON.stringify(error, null, 2));
+    throw error;
+  }
+}
+
+export async function uploadAvatar(localUri: string): Promise<string> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Nisi ulogovana.");
+
+  // Napomena: fetch(uri).blob() ne radi pouzdano u React Native/Expo -
+  // zna da pošalje prazan/neispravan sadržaj pa Supabase Storage to
+  // odbije kao da korisnik uopšte nije ulogovan (RLS greška). Zato se
+  // slika čita kao base64 pa pretvara u ArrayBuffer pre slanja.
+  const base64 = await FileSystem.readAsStringAsync(localUri, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+
+  const path = `${user.id}/avatar.jpg`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("avatars2")
+    .upload(path, decode(base64), { contentType: "image/jpeg", upsert: true });
+  if (uploadError) throw uploadError;
+
+  const { data } = supabase.storage.from("avatars2").getPublicUrl(path);
+  return `${data.publicUrl}?t=${Date.now()}`;
 }

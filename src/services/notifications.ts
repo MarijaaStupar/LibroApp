@@ -31,9 +31,15 @@ export async function isReadingReminderEnabled(): Promise<boolean> {
   return value === "true";
 }
 
-export async function setReadingReminder(enabled: boolean): Promise<boolean> {
+export type ReminderResult =
+  | { ok: true }
+  | { ok: false; reason: "expo-go" | "permission-denied" | "error"; message?: string };
+
+export async function setReadingReminder(
+  enabled: boolean,
+): Promise<ReminderResult> {
   if (isExpoGo()) {
-    return false;
+    return { ok: false, reason: "expo-go" };
   }
   try {
     const Notifications = await loadNotifications();
@@ -41,7 +47,14 @@ export async function setReadingReminder(enabled: boolean): Promise<boolean> {
     if (enabled) {
       const { status } = await Notifications.requestPermissionsAsync();
       if (status !== "granted") {
-        return false;
+        return { ok: false, reason: "permission-denied" };
+      }
+
+      if (Notifications.setNotificationChannelAsync) {
+        await Notifications.setNotificationChannelAsync("reminders", {
+          name: "Podsetnici za čitanje",
+          importance: Notifications.AndroidImportance?.DEFAULT ?? 3,
+        }).catch(() => {});
       }
 
       await Notifications.cancelScheduledNotificationAsync(
@@ -53,25 +66,28 @@ export async function setReadingReminder(enabled: boolean): Promise<boolean> {
         content: {
           title: "Vreme je za čitanje 📖",
           body: "Otvori Libro i nastavi svoju knjigu.",
+          ...(Notifications.AndroidNotificationPriority
+            ? { channelId: "reminders" }
+            : {}),
         },
         trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
+          type: Notifications.SchedulableTriggerInputTypes.DAILY,
           hour: 20,
           minute: 0,
-          repeats: true,
         },
       });
 
       await AsyncStorage.setItem(STORAGE_KEY, "true");
-      return true;
+      return { ok: true };
     }
 
     await Notifications.cancelScheduledNotificationAsync(NOTIFICATION_ID).catch(
       () => {},
     );
     await AsyncStorage.setItem(STORAGE_KEY, "false");
-    return true;
-  } catch {
-    return false;
+    return { ok: true };
+  } catch (e: any) {
+    console.log("setReadingReminder error", e);
+    return { ok: false, reason: "error", message: e?.message ?? String(e) };
   }
 }
